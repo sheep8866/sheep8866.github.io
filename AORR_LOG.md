@@ -43,4 +43,7 @@
 - 입력 방식: `키보드 입력`
 - 반영 파일: `index.html`, `styles.css`, `script.js`
 - 확인 결과: `node --check` 통과
-- 상태: `READY_FOR_DEPLOYMENT`
+- 배포 커밋: `cf07b746f92e910d9243600d8c776236665c2e3b`
+- 배포 URL: `https://qvkill-create.github.io`
+- HTTP 확인: `200 OK`
+- 상태: `DEPLOYED`

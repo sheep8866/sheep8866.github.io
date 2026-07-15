@@ -11,7 +11,7 @@
 ## 실행
 - Mode: `CODEX_FALLBACK`
 - Claude model: `claude-sonnet-5`
-- Current commit: `0dfca909ca464909b89e52c08c27abd6bb889134`
+- Current commit: `cf07b746f92e910d9243600d8c776236665c2e3b`
 - Last known stable URL: `https://qvkill-create.github.io`
 - Git state: 저장소는 `main` 브랜치이며, 문서 변경분은 현재 작업 트리에 반영된 상태다
 - Rollback 기준: `index.html`, `styles.css`, `script.js`, `CHANGE_REQUEST.md`, `AORR_LOG.md`, `AORR.md`, `MEMORY.md`의 마지막 변경만 되돌린다
@@ -21,8 +21,8 @@
 - 두 게임 모두 키보드 입력으로 동작하고, 마지막으로 선택한 게임이 입력을 받는다.
 - 지렁이 게임은 시작, 이동, 음식, 성장, 점수, 충돌, 게임 오버, 일시정지, 재시작, 최고 점수 흐름을 넣었다.
 - 테트리스 게임은 좌우 이동, 회전, 하드 드롭, 일시정지, 재시작, 점수, 줄, 레벨 흐름을 넣었다.
-- 배포 커밋은 `0dfca909ca464909b89e52c08c27abd6bb889134`이고, `https://qvkill-create.github.io`가 `200 OK`로 응답한다.
-- 다음 단계는 새 변경분을 커밋하고 다시 배포하는 일이다.
+- 배포 커밋은 `cf07b746f92e910d9243600d8c776236665c2e3b`이고, `https://qvkill-create.github.io`가 `200 OK`로 응답한다.
+- 다음 단계는 없고, 현재 상태는 배포 완료다.
 
 ## 최근 루프
 | 루프 | 상태 | 실행 모드·모델 | 변경 파일 | 테스트 | Retry | 다음 작업 |
