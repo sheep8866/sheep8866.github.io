@@ -11,16 +11,16 @@
 ## 실행
 - Mode: `CODEX_FALLBACK`
 - Claude model: `claude-sonnet-5`
-- Current commit: `eeffede3af0a3e6ca269da5ca5a38daaac83038c`
+- Current commit: `0dfca909ca464909b89e52c08c27abd6bb889134`
 - Last known stable URL: `https://qvkill-create.github.io`
-- Git state: 저장소는 `main` 브랜치이며, `CHANGE_REQUEST.md`, `MEMORY.md`, `AORR.md`, `AORR_LOG.md`는 아직 추적되지 않은 상태다
+- Git state: 저장소는 `main` 브랜치이며, 문서 변경분은 현재 작업 트리에 반영된 상태다
 - Rollback 기준: `index.html`, `styles.css`, `script.js`, `CHANGE_REQUEST.md`, `AORR_LOG.md`, `AORR.md`, `MEMORY.md`의 마지막 변경만 되돌린다
 
 ## 현재 상태
 - 홈, About, Projects, Experience, Research, Contact, Games 구조를 다시 배치했다.
 - 지렁이 게임은 시작, 이동, 음식, 성장, 점수, 충돌, 게임 오버, 일시정지, 재시작, 최고 점수 흐름을 넣었다.
 - 모바일 방향 버튼과 반대 방향 방지, 중복 루프 방지, 적 폭발/재생성 로직을 연결했다.
-- 배포 커밋은 `eeffede3af0a3e6ca269da5ca5a38daaac83038c`이고, `https://qvkill-create.github.io`가 `200 OK`로 응답한다.
+- 배포 커밋은 `0dfca909ca464909b89e52c08c27abd6bb889134`이고, `https://qvkill-create.github.io`가 `200 OK`로 응답한다.
 - step8 문서를 저장했고, step9 적용과 다음 배포를 준비 중이다.
 
 ## 최근 루프

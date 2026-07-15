@@ -15,12 +15,12 @@
 
 - 실행 모드: `CODEX_FALLBACK`
 - Claude 모델: `claude-sonnet-5`
-- 배포 커밋: `eeffede3af0a3e6ca269da5ca5a38daaac83038c`
+- 배포 커밋: `0dfca909ca464909b89e52c08c27abd6bb889134`
 - 배포 URL: `https://qvkill-create.github.io`
 - HTTP 확인: `200 OK`
 - 변경 파일: `index.html`, `script.js`, `styles.css`
 - 보류 파일: `CHANGE_REQUEST.md`, `AORR.md`, `MEMORY.md`
-- 상태: `STEP7_DEPLOYED_WAITING_STEP8_STEP9`
+- 상태: `STEP7_DEPLOYED`
 
 ## Step 8 - Change Request Capture
 
@@ -35,4 +35,4 @@
 - 현재 상태: 변경 항목은 이미 코드에 반영된 상태로 확인됨
 - 반영 문서: `AORR.md`, `MEMORY.md`
 - 다음 작업: 검증 후 재배포
-- 상태: `STEP9_IN_PROGRESS`
+- 상태: `STEP9_COMPLETE`
