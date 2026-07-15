@@ -17,17 +17,18 @@
 - Rollback 기준: `index.html`, `styles.css`, `script.js`, `CHANGE_REQUEST.md`, `AORR_LOG.md`, `AORR.md`, `MEMORY.md`의 마지막 변경만 되돌린다
 
 ## 현재 상태
-- 홈, About, Projects, Experience, Research, Contact, Games 구조를 다시 배치했다.
+- 홈, About, Projects, Experience, Research, Contact, Games 구조를 유지하면서 `지렁이 게임` 옆에 `테트리스 게임`을 추가했다.
+- 두 게임 모두 키보드 입력으로 동작하고, 마지막으로 선택한 게임이 입력을 받는다.
 - 지렁이 게임은 시작, 이동, 음식, 성장, 점수, 충돌, 게임 오버, 일시정지, 재시작, 최고 점수 흐름을 넣었다.
-- 모바일 방향 버튼과 반대 방향 방지, 중복 루프 방지, 적 폭발/재생성 로직을 연결했다.
+- 테트리스 게임은 좌우 이동, 회전, 하드 드롭, 일시정지, 재시작, 점수, 줄, 레벨 흐름을 넣었다.
 - 배포 커밋은 `0dfca909ca464909b89e52c08c27abd6bb889134`이고, `https://qvkill-create.github.io`가 `200 OK`로 응답한다.
-- step8 문서를 저장했고, step9 적용과 다음 배포를 준비 중이다.
+- 다음 단계는 새 변경분을 커밋하고 다시 배포하는 일이다.
 
 ## 최근 루프
 | 루프 | 상태 | 실행 모드·모델 | 변경 파일 | 테스트 | Retry | 다음 작업 |
 |---|---|---|---|---|---|---|
 | 1 | 완료 | `CODEX_FALLBACK` / `claude-sonnet-5` | `index.html`, `script.js`, `styles.css` | 배포 완료 | 0 | step8/9 문서와 로그 반영 |
-| 2 | 진행중 | `CODEX_FALLBACK` / `claude-sonnet-5` | `CHANGE_REQUEST.md`, `AORR.md`, `AORR_LOG.md`, `MEMORY.md` | 미실행 | 0 | step9 검증 후 재배포 |
+| 2 | 진행중 | `CODEX_FALLBACK` / `claude-sonnet-5` | `index.html`, `styles.css`, `script.js`, `AORR_LOG.md`, `MEMORY.md` | `node --check` 통과 | 0 | 커밋 후 재배포 |
 
 ## 주의
 - 확인되지 않은 정보는 `[`사람 확인 필요`]`로 유지한다.

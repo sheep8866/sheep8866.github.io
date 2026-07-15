@@ -17,518 +17,740 @@ if (menuToggle && siteNav) {
   });
 }
 
-(function initGame() {
-  const canvas = document.getElementById('gameCanvas');
-  const statusEl = document.getElementById('game-status');
-  const scoreEl = document.getElementById('game-score');
-  const highScoreEl = document.getElementById('game-high-score');
-  const countdownEl = document.getElementById('game-countdown');
-  const overlayEl = document.getElementById('game-overlay');
-  const actionButtons = document.querySelectorAll('[data-action]');
-  const directionButtons = document.querySelectorAll('[data-direction]');
+(function initGames() {
+  const gameCards = Array.from(document.querySelectorAll('[data-game]'));
+  const snake = {
+    canvas: document.getElementById('snakeCanvas'),
+    status: document.getElementById('snake-status'),
+    score: document.getElementById('snake-score'),
+    highScore: document.getElementById('snake-high-score'),
+    countdown: document.getElementById('snake-countdown'),
+    overlay: document.getElementById('snake-overlay'),
+    start: document.querySelector('[data-action="snake-start"]'),
+    pause: document.querySelector('[data-action="snake-pause"]'),
+    restart: document.querySelector('[data-action="snake-restart"]'),
+  };
+  const tetris = {
+    canvas: document.getElementById('tetrisCanvas'),
+    status: document.getElementById('tetris-status'),
+    score: document.getElementById('tetris-score'),
+    lines: document.getElementById('tetris-lines'),
+    level: document.getElementById('tetris-level'),
+    overlay: document.getElementById('tetris-overlay'),
+    start: document.querySelector('[data-action="tetris-start"]'),
+    pause: document.querySelector('[data-action="tetris-pause"]'),
+    restart: document.querySelector('[data-action="tetris-restart"]'),
+  };
 
-  if (!canvas || !canvas.getContext || !statusEl || !scoreEl || !highScoreEl || !countdownEl || !overlayEl) {
+  if (
+    !snake.canvas ||
+    !snake.canvas.getContext ||
+    !snake.status ||
+    !snake.score ||
+    !snake.highScore ||
+    !snake.countdown ||
+    !snake.overlay ||
+    !tetris.canvas ||
+    !tetris.canvas.getContext ||
+    !tetris.status ||
+    !tetris.score ||
+    !tetris.lines ||
+    !tetris.level ||
+    !tetris.overlay
+  ) {
     return;
   }
 
-  const context = canvas.getContext('2d');
-  const GRID_SIZE = 20;
-  const COLS = canvas.width / GRID_SIZE;
-  const ROWS = canvas.height / GRID_SIZE;
-  const STORAGE_KEY = 'qvkill-create-snake-high-score';
-  const MOVE_INTERVAL = 120;
-  const ENEMY_MOVE_INTERVAL = 170;
-  const ENEMY_EXPLOSION_INTERVAL = 5000;
-  const ENEMY_EXPLOSION_DURATION = 650;
+  const snakeCtx = snake.canvas.getContext('2d');
+  const tetrisCtx = tetris.canvas.getContext('2d');
+  const GRID = 20;
+  const snakeCols = snake.canvas.width / GRID;
+  const snakeRows = snake.canvas.height / GRID;
+  const TETRIS_COLS = 10;
+  const TETRIS_ROWS = 20;
+  const TETRIS_CELL = tetris.canvas.width / TETRIS_COLS;
+  const snakeKey = 'qvkill-create-snake-high-score';
 
-  const directions = {
+  const dirs = {
     up: { x: 0, y: -1 },
     down: { x: 0, y: 1 },
     left: { x: -1, y: 0 },
     right: { x: 1, y: 0 },
   };
 
-  const oppositeDirections = {
-    up: 'down',
-    down: 'up',
-    left: 'right',
-    right: 'left',
+  const opposite = { up: 'down', down: 'up', left: 'right', right: 'left' };
+  const snakeStates = { idle: '대기 중', running: '진행 중', paused: '일시정지', gameOver: '게임 오버' };
+  const tetrisStates = { idle: '대기 중', running: '진행 중', paused: '일시정지', gameOver: '게임 오버' };
+  const pieceColors = { I: '#59d6ff', J: '#6f8cff', L: '#ffb05b', O: '#ffd86e', S: '#6be29a', T: '#cf84ff', Z: '#ff6d7c' };
+
+  const state = {
+    activeGame: 'snake',
+    lastFrame: 0,
+    snake: {
+      phase: 'idle',
+      score: 0,
+      highScore: 0,
+      snake: [],
+      food: { x: 0, y: 0 },
+      enemy: null,
+      enemyDirection: { ...dirs.left },
+      currentDirection: { ...dirs.right },
+      pendingDirection: { ...dirs.right },
+      snakeAccumulator: 0,
+      enemyAccumulator: 0,
+      explosionAccumulator: 0,
+      loop: 0,
+    },
+    tetris: {
+      phase: 'idle',
+      score: 0,
+      lines: 0,
+      level: 1,
+      board: createBoard(),
+      piece: null,
+      rotation: 0,
+      dropAccumulator: 0,
+      loop: 0,
+    },
   };
 
-  let loopId = 0;
-  let lastFrame = 0;
-  let snakeAccumulator = 0;
-  let enemyAccumulator = 0;
-  let enemyExplosionAccumulator = 0;
-  let gamePhase = 'idle';
-  let score = 0;
-  let highScore = 0;
-  let snake = [];
-  let food = { x: 0, y: 0 };
-  let enemy = {
-    position: { x: 0, y: 0 },
-    exploding: false,
-    explosionTime: 0,
-    hue: 24,
-  };
-  let currentDirection = { ...directions.right };
-  let pendingDirection = { ...directions.right };
-  let enemyDirection = { ...directions.left };
-
-  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-  const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-  const serialize = (point) => `${point.x},${point.y}`;
-  const isSamePoint = (a, b) => a.x === b.x && a.y === b.y;
-
-  function readHighScore() {
+  function loadSnakeHighScore() {
     try {
-      const stored = Number(window.localStorage.getItem(STORAGE_KEY));
+      const stored = Number(window.localStorage.getItem(snakeKey));
       return Number.isFinite(stored) ? stored : 0;
     } catch {
       return 0;
     }
   }
 
-  function writeHighScore(value) {
+  function saveSnakeHighScore(value) {
     try {
-      window.localStorage.setItem(STORAGE_KEY, String(value));
+      window.localStorage.setItem(snakeKey, String(value));
     } catch {
-      // Ignore storage errors in restricted environments.
+      // Local storage may be unavailable in restricted environments.
     }
   }
 
-  function updateHud() {
-    scoreEl.textContent = String(score);
-    highScoreEl.textContent = String(highScore);
-    const countdown = Math.max(0, (ENEMY_EXPLOSION_INTERVAL - enemyExplosionAccumulator) / 1000);
-    countdownEl.textContent = `${countdown.toFixed(1)}s`;
+  function createBoard() {
+    return Array.from({ length: TETRIS_ROWS }, () => Array(TETRIS_COLS).fill(''));
+  }
 
-    const labels = {
-      idle: '대기 중',
-      running: '진행 중',
-      paused: '일시정지',
-      gameOver: '게임 오버',
-    };
-    statusEl.textContent = labels[gamePhase] || '대기 중';
+  function cloneMatrix(matrix) {
+    return matrix.map((row) => row.slice());
+  }
 
-    let headline = '시작하려면 버튼을 누르거나 방향키를 입력하세요.';
-    let detail = '일시정지와 재시작도 지원합니다.';
-    if (gamePhase === 'paused') {
-      headline = '일시정지 상태입니다.';
-      detail = '다시 시작하려면 Start를 누르세요.';
-    } else if (gamePhase === 'gameOver') {
-      headline = '게임 오버!';
-      detail = 'Restart로 다시 도전하세요.';
+  function rotateMatrix(matrix, direction = 1) {
+    const rows = matrix.length;
+    const cols = matrix[0].length;
+    const rotated = Array.from({ length: cols }, () => Array(rows).fill(0));
+
+    for (let y = 0; y < rows; y += 1) {
+      for (let x = 0; x < cols; x += 1) {
+        if (direction > 0) {
+          rotated[x][rows - 1 - y] = matrix[y][x];
+        } else {
+          rotated[cols - 1 - x][y] = matrix[y][x];
+        }
+      }
     }
 
-    overlayEl.innerHTML = `<strong>${headline}</strong><span>${detail}</span>`;
-    overlayEl.classList.toggle('is-visible', gamePhase !== 'running');
+    return rotated;
+  }
+
+  function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function serialize(point) {
+    return `${point.x},${point.y}`;
+  }
+
+  function isSamePoint(a, b) {
+    return a.x === b.x && a.y === b.y;
+  }
+
+  function setActiveGame(name) {
+    state.activeGame = name;
+    gameCards.forEach((card) => {
+      card.classList.toggle('is-active', card.dataset.game === name);
+    });
+  }
+
+  function updateSnakeHud() {
+    snake.status.textContent = snakeStates[state.snake.phase] || snakeStates.idle;
+    snake.score.textContent = String(state.snake.score);
+    snake.highScore.textContent = String(state.snake.highScore);
+    const countdown = Math.max(0, (5000 - state.snake.explosionAccumulator) / 1000);
+    snake.countdown.textContent = `${countdown.toFixed(1)}s`;
+    const overlayVisible = state.snake.phase !== 'running';
+    snake.overlay.classList.toggle('is-visible', overlayVisible);
+    snake.overlay.innerHTML =
+      state.snake.phase === 'running'
+        ? ''
+        : state.snake.phase === 'paused'
+          ? '<strong>지렁이 게임이 일시정지 상태입니다.</strong><span>다시 시작하려면 Start를 누르세요.</span>'
+          : state.snake.phase === 'gameOver'
+            ? '<strong>지렁이 게임 오버!</strong><span>Restart로 다시 도전하세요.</span>'
+            : '<strong>지렁이 게임을 선택하면 방향키로 시작합니다.</strong><span>일시정지와 재시작을 지원합니다.</span>';
+  }
+
+  function updateTetrisHud() {
+    tetris.status.textContent = tetrisStates[state.tetris.phase] || tetrisStates.idle;
+    tetris.score.textContent = String(state.tetris.score);
+    tetris.lines.textContent = String(state.tetris.lines);
+    tetris.level.textContent = String(state.tetris.level);
+    tetris.overlay.classList.toggle('is-visible', state.tetris.phase !== 'running');
+    tetris.overlay.innerHTML =
+      state.tetris.phase === 'running'
+        ? ''
+        : state.tetris.phase === 'paused'
+          ? '<strong>테트리스가 일시정지 상태입니다.</strong><span>다시 시작하려면 Start를 누르세요.</span>'
+          : state.tetris.phase === 'gameOver'
+            ? '<strong>테트리스 게임 오버!</strong><span>Restart로 새 판을 시작하세요.</span>'
+            : '<strong>테트리스 게임을 선택하면 키보드로 시작합니다.</strong><span>좌우 이동, 회전, 하드 드롭, 재시작을 지원합니다.</span>';
   }
 
   function randomEnemyDirection() {
-    const options = Object.values(directions);
+    const options = Object.values(dirs);
     return { ...options[randomInt(0, options.length - 1)] };
   }
 
-  function spawnFood() {
-    const blocked = new Set(snake.map(serialize));
-    blocked.add(serialize(enemy.position));
+  function spawnSnakeFood() {
+    const blocked = new Set(state.snake.snake.map(serialize));
+    if (state.snake.enemy) {
+      blocked.add(serialize(state.snake.enemy.position));
+    }
 
-    let point = { x: randomInt(0, COLS - 1), y: randomInt(0, ROWS - 1) };
-    let safety = COLS * ROWS;
+    let point = { x: randomInt(0, snakeCols - 1), y: randomInt(0, snakeRows - 1) };
+    let safety = snakeCols * snakeRows;
     while (blocked.has(serialize(point)) && safety > 0) {
-      point = { x: randomInt(0, COLS - 1), y: randomInt(0, ROWS - 1) };
+      point = { x: randomInt(0, snakeCols - 1), y: randomInt(0, snakeRows - 1) };
       safety -= 1;
     }
 
     return point;
   }
 
-  function spawnEnemy() {
-    const blocked = new Set(snake.map(serialize));
-    blocked.add(serialize(food));
-
-    let position = { x: randomInt(1, COLS - 2), y: randomInt(1, ROWS - 2) };
-    let safety = COLS * ROWS;
+  function spawnSnakeEnemy() {
+    const blocked = new Set(state.snake.snake.map(serialize));
+    blocked.add(serialize(state.snake.food));
+    let position = { x: randomInt(1, snakeCols - 2), y: randomInt(1, snakeRows - 2) };
+    let safety = snakeCols * snakeRows;
     while (blocked.has(serialize(position)) && safety > 0) {
-      position = { x: randomInt(1, COLS - 2), y: randomInt(1, ROWS - 2) };
+      position = { x: randomInt(1, snakeCols - 2), y: randomInt(1, snakeRows - 2) };
       safety -= 1;
     }
 
-    enemy = {
+    state.snake.enemy = {
       position,
       exploding: false,
       explosionTime: 0,
       hue: randomInt(12, 32),
     };
-    enemyDirection = randomEnemyDirection();
+    state.snake.enemyDirection = randomEnemyDirection();
   }
 
-  function resetRound(keepPhase = false) {
-    snake = [
+  function resetSnake(keepPhase = false) {
+    state.snake.snake = [
       { x: 6, y: 9 },
       { x: 5, y: 9 },
       { x: 4, y: 9 },
     ];
-    score = 0;
-    snakeAccumulator = 0;
-    enemyAccumulator = 0;
-    enemyExplosionAccumulator = 0;
-    currentDirection = { ...directions.right };
-    pendingDirection = { ...directions.right };
-    enemy = {
-      position: { x: 0, y: 0 },
-      exploding: false,
-      explosionTime: 0,
-      hue: 24,
-    };
-    food = spawnFood();
-    spawnEnemy();
-    food = spawnFood();
-
+    state.snake.score = 0;
+    state.snake.snakeAccumulator = 0;
+    state.snake.enemyAccumulator = 0;
+    state.snake.explosionAccumulator = 0;
+    state.snake.currentDirection = { ...dirs.right };
+    state.snake.pendingDirection = { ...dirs.right };
+    state.snake.food = { x: 16, y: 10 };
+    spawnSnakeEnemy();
+    state.snake.food = spawnSnakeFood();
     if (!keepPhase) {
-      gamePhase = 'idle';
+      state.snake.phase = 'idle';
     }
-
-    updateHud();
+    updateSnakeHud();
   }
 
-  function stopLoop() {
-    if (loopId) {
-      window.cancelAnimationFrame(loopId);
-      loopId = 0;
-    }
-  }
-
-  function startLoop() {
-    if (!loopId) {
-      lastFrame = performance.now();
-      loopId = window.requestAnimationFrame(step);
-    }
-  }
-
-  function setGameOver(reason) {
-    gamePhase = 'gameOver';
-    stopLoop();
-    if (score > highScore) {
-      highScore = score;
-      writeHighScore(highScore);
-    }
-    statusEl.textContent = reason;
-    updateHud();
-  }
-
-  function startGame() {
-    if (gamePhase === 'gameOver') {
-      restartGame();
+  function snakeStart() {
+    if (state.snake.phase === 'gameOver') {
+      snakeRestart();
       return;
     }
-
-    if (gamePhase === 'idle' || gamePhase === 'paused') {
-      gamePhase = 'running';
-      startLoop();
-      updateHud();
+    if (state.snake.phase === 'idle' || state.snake.phase === 'paused') {
+      state.snake.phase = 'running';
+      updateSnakeHud();
     }
   }
 
-  function pauseGame() {
-    if (gamePhase !== 'running') {
+  function snakePause() {
+    if (state.snake.phase !== 'running') {
       return;
     }
-
-    gamePhase = 'paused';
-    stopLoop();
-    updateHud();
+    state.snake.phase = 'paused';
+    updateSnakeHud();
   }
 
-  function restartGame() {
-    resetRound(true);
-    gamePhase = 'running';
-    startLoop();
-    updateHud();
+  function snakeRestart() {
+    resetSnake(true);
+    state.snake.phase = 'running';
+    updateSnakeHud();
   }
 
-  function changeDirection(nextName) {
-    if (!directions[nextName]) {
+  function snakeChangeDirection(nextName) {
+    if (!dirs[nextName]) {
       return;
     }
-
-    const currentName = Object.entries(directions).find(([, value]) => value.x === currentDirection.x && value.y === currentDirection.y)?.[0];
-    if (currentName && oppositeDirections[currentName] === nextName) {
+    const currentName = Object.entries(dirs).find(([, value]) => value.x === state.snake.currentDirection.x && value.y === state.snake.currentDirection.y)?.[0];
+    if (currentName && opposite[currentName] === nextName) {
       return;
     }
-
-    pendingDirection = { ...directions[nextName] };
-    if (gamePhase === 'idle') {
-      startGame();
+    state.snake.pendingDirection = { ...dirs[nextName] };
+    if (state.snake.phase === 'idle') {
+      snakeStart();
     }
   }
 
-  function moveSnake() {
-    currentDirection = { ...pendingDirection };
+  function snakeStep() {
+    state.snake.currentDirection = { ...state.snake.pendingDirection };
     const nextHead = {
-      x: snake[0].x + currentDirection.x,
-      y: snake[0].y + currentDirection.y,
+      x: state.snake.snake[0].x + state.snake.currentDirection.x,
+      y: state.snake.snake[0].y + state.snake.currentDirection.y,
     };
 
-    if (nextHead.x < 0 || nextHead.x >= COLS || nextHead.y < 0 || nextHead.y >= ROWS) {
-      setGameOver('벽에 충돌했습니다');
-      return;
-    }
-
-    const bodyWithoutTail = snake.slice(0, -1);
-    if (bodyWithoutTail.some((segment) => isSamePoint(segment, nextHead))) {
-      setGameOver('자기 몸에 충돌했습니다');
-      return;
-    }
-
-    if (!enemy.exploding && isSamePoint(nextHead, enemy.position)) {
-      setGameOver('적과 충돌했습니다');
-      return;
-    }
-
-    snake.unshift(nextHead);
-
-    if (isSamePoint(nextHead, food)) {
-      score += 10;
-      if (score > highScore) {
-        highScore = score;
-        writeHighScore(highScore);
+    if (nextHead.x < 0 || nextHead.x >= snakeCols || nextHead.y < 0 || nextHead.y >= snakeRows) {
+      state.snake.phase = 'gameOver';
+      if (state.snake.score > state.snake.highScore) {
+        state.snake.highScore = state.snake.score;
+        saveSnakeHighScore(state.snake.highScore);
       }
-      food = spawnFood();
+      updateSnakeHud();
+      return;
+    }
+
+    const bodyWithoutTail = state.snake.snake.slice(0, -1);
+    if (bodyWithoutTail.some((segment) => isSamePoint(segment, nextHead))) {
+      state.snake.phase = 'gameOver';
+      if (state.snake.score > state.snake.highScore) {
+        state.snake.highScore = state.snake.score;
+        saveSnakeHighScore(state.snake.highScore);
+      }
+      updateSnakeHud();
+      return;
+    }
+
+    if (state.snake.enemy && !state.snake.enemy.exploding && isSamePoint(nextHead, state.snake.enemy.position)) {
+      state.snake.phase = 'gameOver';
+      if (state.snake.score > state.snake.highScore) {
+        state.snake.highScore = state.snake.score;
+        saveSnakeHighScore(state.snake.highScore);
+      }
+      updateSnakeHud();
+      return;
+    }
+
+    state.snake.snake.unshift(nextHead);
+
+    if (isSamePoint(nextHead, state.snake.food)) {
+      state.snake.score += 10;
+      if (state.snake.score > state.snake.highScore) {
+        state.snake.highScore = state.snake.score;
+        saveSnakeHighScore(state.snake.highScore);
+      }
+      state.snake.food = spawnSnakeFood();
     } else {
-      snake.pop();
+      state.snake.snake.pop();
     }
   }
 
-  function moveEnemy() {
-    if (enemy.exploding) {
+  function moveSnakeEnemy() {
+    if (!state.snake.enemy || state.snake.enemy.exploding) {
       return;
     }
-
     if (Math.random() < 0.55) {
-      enemyDirection = randomEnemyDirection();
+      state.snake.enemyDirection = randomEnemyDirection();
     }
 
     let nextPosition = {
-      x: enemy.position.x + enemyDirection.x,
-      y: enemy.position.y + enemyDirection.y,
+      x: state.snake.enemy.position.x + state.snake.enemyDirection.x,
+      y: state.snake.enemy.position.y + state.snake.enemyDirection.y,
     };
 
-    if (nextPosition.x < 0 || nextPosition.x >= COLS) {
-      enemyDirection = { x: -enemyDirection.x, y: enemyDirection.y };
-      nextPosition.x = clamp(enemy.position.x + enemyDirection.x, 0, COLS - 1);
+    if (nextPosition.x < 0 || nextPosition.x >= snakeCols) {
+      state.snake.enemyDirection = { x: -state.snake.enemyDirection.x, y: state.snake.enemyDirection.y };
+      nextPosition.x = Math.min(snakeCols - 1, Math.max(0, state.snake.enemy.position.x + state.snake.enemyDirection.x));
     }
 
-    if (nextPosition.y < 0 || nextPosition.y >= ROWS) {
-      enemyDirection = { x: enemyDirection.x, y: -enemyDirection.y };
-      nextPosition.y = clamp(enemy.position.y + enemyDirection.y, 0, ROWS - 1);
+    if (nextPosition.y < 0 || nextPosition.y >= snakeRows) {
+      state.snake.enemyDirection = { x: state.snake.enemyDirection.x, y: -state.snake.enemyDirection.y };
+      nextPosition.y = Math.min(snakeRows - 1, Math.max(0, state.snake.enemy.position.y + state.snake.enemyDirection.y));
     }
 
-    if (snake.some((segment) => isSamePoint(segment, nextPosition))) {
-      setGameOver('적이 지렁이를 덮쳤습니다');
+    if (state.snake.snake.some((segment) => isSamePoint(segment, nextPosition))) {
+      state.snake.phase = 'gameOver';
+      if (state.snake.score > state.snake.highScore) {
+        state.snake.highScore = state.snake.score;
+        saveSnakeHighScore(state.snake.highScore);
+      }
+      updateSnakeHud();
       return;
     }
 
-    enemy.position = nextPosition;
+    state.snake.enemy.position = nextPosition;
   }
 
-  function handleEnemyExplosion(dt) {
-    enemyExplosionAccumulator += dt;
-
-    if (!enemy.exploding && enemyExplosionAccumulator >= ENEMY_EXPLOSION_INTERVAL) {
-      enemy.exploding = true;
-      enemy.explosionTime = 0;
-      enemyExplosionAccumulator = 0;
+  function handleSnakeExplosion(dt) {
+    state.snake.explosionAccumulator += dt;
+    if (!state.snake.enemy.exploding && state.snake.explosionAccumulator >= 5000) {
+      state.snake.enemy.exploding = true;
+      state.snake.enemy.explosionTime = 0;
+      state.snake.explosionAccumulator = 0;
     }
 
-    if (enemy.exploding) {
-      enemy.explosionTime += dt;
+    if (state.snake.enemy.exploding) {
+      state.snake.enemy.explosionTime += dt;
       const dangerCells = [
-        enemy.position,
-        { x: enemy.position.x + 1, y: enemy.position.y },
-        { x: enemy.position.x - 1, y: enemy.position.y },
-        { x: enemy.position.x, y: enemy.position.y + 1 },
-        { x: enemy.position.x, y: enemy.position.y - 1 },
-      ].filter((point) => point.x >= 0 && point.x < COLS && point.y >= 0 && point.y < ROWS);
+        state.snake.enemy.position,
+        { x: state.snake.enemy.position.x + 1, y: state.snake.enemy.position.y },
+        { x: state.snake.enemy.position.x - 1, y: state.snake.enemy.position.y },
+        { x: state.snake.enemy.position.x, y: state.snake.enemy.position.y + 1 },
+        { x: state.snake.enemy.position.x, y: state.snake.enemy.position.y - 1 },
+      ].filter((point) => point.x >= 0 && point.x < snakeCols && point.y >= 0 && point.y < snakeRows);
 
-      if (snake.some((segment) => dangerCells.some((cell) => isSamePoint(segment, cell)))) {
-        setGameOver('폭발에 휘말렸습니다');
+      if (state.snake.snake.some((segment) => dangerCells.some((cell) => isSamePoint(segment, cell)))) {
+        state.snake.phase = 'gameOver';
+        if (state.snake.score > state.snake.highScore) {
+          state.snake.highScore = state.snake.score;
+          saveSnakeHighScore(state.snake.highScore);
+        }
+        updateSnakeHud();
         return;
       }
 
-      if (enemy.explosionTime >= ENEMY_EXPLOSION_DURATION) {
-        spawnEnemy();
-        food = spawnFood();
-        enemyExplosionAccumulator = 0;
+      if (state.snake.enemy.explosionTime >= 650) {
+        spawnSnakeEnemy();
+        state.snake.food = spawnSnakeFood();
+        state.snake.explosionAccumulator = 0;
       }
     }
   }
 
-  function drawRoundRect(x, y, width, height, radius, fillStyle) {
-    context.fillStyle = fillStyle;
-    context.beginPath();
-    if (typeof context.roundRect === 'function') {
-      context.roundRect(x, y, width, height, radius);
+  function drawSnakeRoundRect(ctx, x, y, width, height, radius, fillStyle) {
+    ctx.fillStyle = fillStyle;
+    ctx.beginPath();
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(x, y, width, height, radius);
     } else {
-      context.moveTo(x + radius, y);
-      context.arcTo(x + width, y, x + width, y + height, radius);
-      context.arcTo(x + width, y + height, x, y + height, radius);
-      context.arcTo(x, y + height, x, y, radius);
-      context.arcTo(x, y, x + width, y, radius);
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + width, y, x + width, y + height, radius);
+      ctx.arcTo(x + width, y + height, x, y + height, radius);
+      ctx.arcTo(x, y + height, x, y, radius);
+      ctx.arcTo(x, y, x + width, y, radius);
     }
-    context.fill();
+    ctx.fill();
   }
 
-  function drawBackground() {
-    context.fillStyle = '#08111f';
-    context.fillRect(0, 0, canvas.width, canvas.height);
+  function renderSnake() {
+    snakeCtx.fillStyle = '#08111f';
+    snakeCtx.fillRect(0, 0, snake.canvas.width, snake.canvas.height);
 
-    context.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-    context.lineWidth = 1;
-
-    for (let x = 0; x <= COLS; x += 1) {
-      const px = x * GRID_SIZE + 0.5;
-      context.beginPath();
-      context.moveTo(px, 0);
-      context.lineTo(px, canvas.height);
-      context.stroke();
+    snakeCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    snakeCtx.lineWidth = 1;
+    for (let x = 0; x <= snakeCols; x += 1) {
+      const px = x * GRID + 0.5;
+      snakeCtx.beginPath();
+      snakeCtx.moveTo(px, 0);
+      snakeCtx.lineTo(px, snake.canvas.height);
+      snakeCtx.stroke();
+    }
+    for (let y = 0; y <= snakeRows; y += 1) {
+      const py = y * GRID + 0.5;
+      snakeCtx.beginPath();
+      snakeCtx.moveTo(0, py);
+      snakeCtx.lineTo(snake.canvas.width, py);
+      snakeCtx.stroke();
     }
 
-    for (let y = 0; y <= ROWS; y += 1) {
-      const py = y * GRID_SIZE + 0.5;
-      context.beginPath();
-      context.moveTo(0, py);
-      context.lineTo(canvas.width, py);
-      context.stroke();
-    }
-  }
-
-  function drawCell(point, fillStyle, radius = 6) {
-    const x = point.x * GRID_SIZE + 2;
-    const y = point.y * GRID_SIZE + 2;
-    const size = GRID_SIZE - 4;
-    drawRoundRect(x, y, size, size, radius, fillStyle);
-  }
-
-  function drawFood() {
     const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 180);
-    drawCell(food, `rgba(255, 197, 87, ${0.88 + pulse * 0.12})`, 8);
+    drawSnakeRoundRect(snakeCtx, state.snake.food.x * GRID + 2, state.snake.food.y * GRID + 2, GRID - 4, GRID - 4, 8, `rgba(255, 197, 87, ${0.88 + pulse * 0.12})`);
+    snakeCtx.fillStyle = '#321800';
+    snakeCtx.beginPath();
+    snakeCtx.arc(state.snake.food.x * GRID + GRID / 2, state.snake.food.y * GRID + GRID / 2, 4, 0, Math.PI * 2);
+    snakeCtx.fill();
 
-    context.fillStyle = '#321800';
-    context.beginPath();
-    context.arc(food.x * GRID_SIZE + GRID_SIZE / 2, food.y * GRID_SIZE + GRID_SIZE / 2, 4, 0, Math.PI * 2);
-    context.fill();
+    if (state.snake.enemy) {
+      if (state.snake.enemy.exploding) {
+        const scale = 1 + state.snake.enemy.explosionTime / 650;
+        const centerX = state.snake.enemy.position.x * GRID + GRID / 2;
+        const centerY = state.snake.enemy.position.y * GRID + GRID / 2;
+        [12, 18, 24].forEach((radius, index) => {
+          snakeCtx.strokeStyle = index === 0 ? '#ffcf8d' : '#ff624b';
+          snakeCtx.lineWidth = 4 - index;
+          snakeCtx.beginPath();
+          snakeCtx.arc(centerX, centerY, radius * scale, 0, Math.PI * 2);
+          snakeCtx.stroke();
+        });
+      } else {
+        drawSnakeRoundRect(snakeCtx, state.snake.enemy.position.x * GRID + 2, state.snake.enemy.position.y * GRID + 2, GRID - 4, GRID - 4, 10, `hsl(${state.snake.enemy.hue} 90% 58%)`);
+        snakeCtx.fillStyle = '#1b0505';
+        snakeCtx.beginPath();
+        snakeCtx.arc(state.snake.enemy.position.x * GRID + GRID / 2, state.snake.enemy.position.y * GRID + GRID / 2, 4, 0, Math.PI * 2);
+        snakeCtx.fill();
+      }
+    }
+
+    state.snake.snake.forEach((segment, index) => {
+      drawSnakeRoundRect(snakeCtx, segment.x * GRID + 2, segment.y * GRID + 2, GRID - 4, GRID - 4, index === 0 ? 9 : 7, `hsl(${index === 0 ? 142 : 160} 58% ${index === 0 ? 56 : 34}%)`);
+    });
+    const head = state.snake.snake[0];
+    snakeCtx.fillStyle = '#08111f';
+    snakeCtx.beginPath();
+    snakeCtx.arc(head.x * GRID + GRID / 2 - 3, head.y * GRID + GRID / 2 - 2, 1.8, 0, Math.PI * 2);
+    snakeCtx.arc(head.x * GRID + GRID / 2 + 3, head.y * GRID + GRID / 2 - 2, 1.8, 0, Math.PI * 2);
+    snakeCtx.fill();
   }
 
-  function drawEnemy() {
-    if (enemy.exploding) {
-      const scale = 1 + enemy.explosionTime / ENEMY_EXPLOSION_DURATION;
-      const centerX = enemy.position.x * GRID_SIZE + GRID_SIZE / 2;
-      const centerY = enemy.position.y * GRID_SIZE + GRID_SIZE / 2;
-      const rings = [12, 18, 24];
+  function createTetrisPiece(type) {
+    const shapes = {
+      I: [[1, 1, 1, 1]],
+      J: [[1, 0, 0], [1, 1, 1]],
+      L: [[0, 0, 1], [1, 1, 1]],
+      O: [[1, 1], [1, 1]],
+      S: [[0, 1, 1], [1, 1, 0]],
+      T: [[0, 1, 0], [1, 1, 1]],
+      Z: [[1, 1, 0], [0, 1, 1]],
+    };
+    return {
+      type,
+      matrix: cloneMatrix(shapes[type]),
+      x: Math.floor(TETRIS_COLS / 2) - 2,
+      y: -1,
+    };
+  }
 
-      rings.forEach((radius, index) => {
-        context.strokeStyle = index === 0 ? '#ffcf8d' : '#ff624b';
-        context.lineWidth = 4 - index;
-        context.beginPath();
-        context.arc(centerX, centerY, radius * scale, 0, Math.PI * 2);
-        context.stroke();
+  function randomPiece() {
+    const types = Object.keys(pieceColors);
+    return createTetrisPiece(types[randomInt(0, types.length - 1)]);
+  }
+
+  function collides(board, piece, offsetX = 0, offsetY = 0, matrix = piece.matrix) {
+    for (let y = 0; y < matrix.length; y += 1) {
+      for (let x = 0; x < matrix[y].length; x += 1) {
+        if (!matrix[y][x]) {
+          continue;
+        }
+        const boardX = piece.x + x + offsetX;
+        const boardY = piece.y + y + offsetY;
+        if (boardX < 0 || boardX >= TETRIS_COLS || boardY >= TETRIS_ROWS) {
+          return true;
+        }
+        if (boardY >= 0 && board[boardY][boardX]) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function mergePiece() {
+    const { piece, board } = state.tetris;
+    piece.matrix.forEach((row, y) => {
+      row.forEach((filled, x) => {
+        if (!filled) {
+          return;
+        }
+        const boardY = piece.y + y;
+        const boardX = piece.x + x;
+        if (boardY >= 0) {
+          board[boardY][boardX] = piece.type;
+        }
       });
+    });
+  }
+
+  function clearLines() {
+    let cleared = 0;
+    for (let y = state.tetris.board.length - 1; y >= 0; y -= 1) {
+      if (state.tetris.board[y].every(Boolean)) {
+        state.tetris.board.splice(y, 1);
+        state.tetris.board.unshift(Array(TETRIS_COLS).fill(''));
+        cleared += 1;
+        y += 1;
+      }
+    }
+
+    if (cleared > 0) {
+      state.tetris.lines += cleared;
+      const lineScores = [0, 100, 300, 500, 800];
+      state.tetris.score += lineScores[cleared] * state.tetris.level;
+      state.tetris.level = Math.floor(state.tetris.lines / 10) + 1;
+    }
+  }
+
+  function spawnTetrisPiece() {
+    state.tetris.piece = randomPiece();
+    state.tetris.piece.x = Math.floor(TETRIS_COLS / 2) - 2;
+    state.tetris.piece.y = 0;
+    if (collides(state.tetris.board, state.tetris.piece)) {
+      state.tetris.phase = 'gameOver';
+      updateTetrisHud();
+      return false;
+    }
+    return true;
+  }
+
+  function resetTetris(keepPhase = false) {
+    state.tetris.board = createBoard();
+    state.tetris.score = 0;
+    state.tetris.lines = 0;
+    state.tetris.level = 1;
+    state.tetris.dropAccumulator = 0;
+    spawnTetrisPiece();
+    if (!keepPhase) {
+      state.tetris.phase = 'idle';
+    }
+    updateTetrisHud();
+  }
+
+  function tetrisStart() {
+    if (state.tetris.phase === 'gameOver') {
+      tetrisRestart();
       return;
     }
-
-    drawCell(enemy.position, `hsl(${enemy.hue} 90% 58%)`, 10);
-    context.fillStyle = '#1b0505';
-    context.beginPath();
-    context.arc(enemy.position.x * GRID_SIZE + GRID_SIZE / 2, enemy.position.y * GRID_SIZE + GRID_SIZE / 2, 4, 0, Math.PI * 2);
-    context.fill();
-  }
-
-  function drawSnake() {
-    snake.forEach((segment, index) => {
-      const hue = index === 0 ? 142 : 160;
-      const light = index === 0 ? 56 : 34;
-      drawCell(segment, `hsl(${hue} 58% ${light}%)`, index === 0 ? 9 : 7);
-    });
-
-    const head = snake[0];
-    context.fillStyle = '#08111f';
-    context.beginPath();
-    context.arc(head.x * GRID_SIZE + GRID_SIZE / 2 - 3, head.y * GRID_SIZE + GRID_SIZE / 2 - 2, 1.8, 0, Math.PI * 2);
-    context.arc(head.x * GRID_SIZE + GRID_SIZE / 2 + 3, head.y * GRID_SIZE + GRID_SIZE / 2 - 2, 1.8, 0, Math.PI * 2);
-    context.fill();
-  }
-
-  function drawOverlayTint() {
-    if (gamePhase !== 'running') {
-      context.fillStyle = 'rgba(4, 8, 16, 0.18)';
-      context.fillRect(0, 0, canvas.width, canvas.height);
+    if (state.tetris.phase === 'idle' || state.tetris.phase === 'paused') {
+      state.tetris.phase = 'running';
+      updateTetrisHud();
     }
   }
 
-  function render() {
-    drawBackground();
-    drawFood();
-    drawEnemy();
-    drawSnake();
-    drawOverlayTint();
+  function tetrisPause() {
+    if (state.tetris.phase !== 'running') {
+      return;
+    }
+    state.tetris.phase = 'paused';
+    updateTetrisHud();
   }
 
-  function step(now) {
-    const dt = now - lastFrame;
-    lastFrame = now;
+  function tetrisRestart() {
+    resetTetris(true);
+    state.tetris.phase = 'running';
+    updateTetrisHud();
+  }
 
-    if (gamePhase === 'running') {
-      snakeAccumulator += dt;
-      enemyAccumulator += dt;
-
-      while (snakeAccumulator >= MOVE_INTERVAL && gamePhase === 'running') {
-        moveSnake();
-        snakeAccumulator -= MOVE_INTERVAL;
-      }
-
-      while (enemyAccumulator >= ENEMY_MOVE_INTERVAL && gamePhase === 'running') {
-        moveEnemy();
-        enemyAccumulator -= ENEMY_MOVE_INTERVAL;
-      }
-
-      if (gamePhase === 'running') {
-        handleEnemyExplosion(dt);
-      }
-    }
-
-    render();
-    updateHud();
-
-    if (gamePhase === 'running') {
-      loopId = window.requestAnimationFrame(step);
-    } else {
-      loopId = 0;
+  function lockTetrisPiece() {
+    mergePiece();
+    clearLines();
+    if (!spawnTetrisPiece()) {
+      return;
     }
   }
 
-  actionButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const action = button.dataset.action;
-      if (action === 'start') {
-        startGame();
-      } else if (action === 'pause') {
-        pauseGame();
-      } else if (action === 'restart') {
-        restartGame();
+  function moveTetrisPiece(offsetX, offsetY) {
+    if (state.tetris.phase !== 'running') {
+      return false;
+    }
+    if (!collides(state.tetris.board, state.tetris.piece, offsetX, offsetY)) {
+      state.tetris.piece.x += offsetX;
+      state.tetris.piece.y += offsetY;
+      return true;
+    }
+    if (offsetY > 0) {
+      lockTetrisPiece();
+    }
+    return false;
+  }
+
+  function rotateTetrisPiece(direction) {
+    if (state.tetris.phase !== 'running') {
+      return;
+    }
+    const rotated = rotateMatrix(state.tetris.piece.matrix, direction);
+    const kicks = [0, -1, 1, -2, 2];
+    for (const kick of kicks) {
+      if (!collides(state.tetris.board, state.tetris.piece, kick, 0, rotated)) {
+        state.tetris.piece.matrix = rotated;
+        state.tetris.piece.x += kick;
+        return;
       }
-    });
-  });
+    }
+  }
 
-  directionButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      changeDirection(button.dataset.direction);
-    });
-  });
+  function hardDropTetris() {
+    if (state.tetris.phase !== 'running') {
+      return;
+    }
+    while (!collides(state.tetris.board, state.tetris.piece, 0, 1)) {
+      state.tetris.piece.y += 1;
+    }
+    lockTetrisPiece();
+  }
 
-  window.addEventListener('keydown', (event) => {
-    const key = event.key.toLowerCase();
+  function tetrisStep(dt) {
+    if (state.tetris.phase !== 'running') {
+      return;
+    }
+    state.tetris.dropAccumulator += dt;
+    const interval = Math.max(90, 700 - (state.tetris.level - 1) * 55);
+    while (state.tetris.dropAccumulator >= interval && state.tetris.phase === 'running') {
+      state.tetris.dropAccumulator -= interval;
+      if (!moveTetrisPiece(0, 1)) {
+        break;
+      }
+    }
+  }
+
+  function drawTetrisCell(x, y, color, alpha = 1) {
+    tetrisCtx.globalAlpha = alpha;
+    tetrisCtx.fillStyle = color;
+    tetrisCtx.fillRect(x * TETRIS_CELL + 1, y * TETRIS_CELL + 1, TETRIS_CELL - 2, TETRIS_CELL - 2);
+    tetrisCtx.globalAlpha = 1;
+  }
+
+  function renderTetris() {
+    tetrisCtx.fillStyle = '#07101d';
+    tetrisCtx.fillRect(0, 0, tetris.canvas.width, tetris.canvas.height);
+
+    tetrisCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    tetrisCtx.lineWidth = 1;
+    for (let x = 0; x <= TETRIS_COLS; x += 1) {
+      const px = x * TETRIS_CELL + 0.5;
+      tetrisCtx.beginPath();
+      tetrisCtx.moveTo(px, 0);
+      tetrisCtx.lineTo(px, tetris.canvas.height);
+      tetrisCtx.stroke();
+    }
+    for (let y = 0; y <= TETRIS_ROWS; y += 1) {
+      const py = y * TETRIS_CELL + 0.5;
+      tetrisCtx.beginPath();
+      tetrisCtx.moveTo(0, py);
+      tetrisCtx.lineTo(tetris.canvas.width, py);
+      tetrisCtx.stroke();
+    }
+
+    state.tetris.board.forEach((row, y) => {
+      row.forEach((cell, x) => {
+        if (cell) {
+          drawTetrisCell(x, y, pieceColors[cell] || '#ffffff');
+        }
+      });
+    });
+
+    if (state.tetris.piece) {
+      state.tetris.piece.matrix.forEach((row, y) => {
+        row.forEach((filled, x) => {
+          if (!filled) {
+            return;
+          }
+          const boardX = state.tetris.piece.x + x;
+          const boardY = state.tetris.piece.y + y;
+          if (boardY >= 0) {
+            drawTetrisCell(boardX, boardY, pieceColors[state.tetris.piece.type]);
+          }
+        });
+      });
+    }
+  }
+
+  function handleSnakeKey(key) {
     const mapping = {
       arrowup: 'up',
       w: 'up',
@@ -539,29 +761,159 @@ if (menuToggle && siteNav) {
       arrowright: 'right',
       d: 'right',
     };
-
     if (mapping[key]) {
-      event.preventDefault();
-      changeDirection(mapping[key]);
-      return;
+      snakeChangeDirection(mapping[key]);
+      return true;
     }
-
     if (key === ' ' || key === 'spacebar') {
-      event.preventDefault();
-      if (gamePhase === 'running') {
-        pauseGame();
+      if (state.snake.phase === 'running') {
+        snakePause();
       } else {
-        startGame();
+        snakeStart();
+      }
+      return true;
+    }
+    if (key === 'p') {
+      if (state.snake.phase === 'running') {
+        snakePause();
+      } else {
+        snakeStart();
+      }
+      return true;
+    }
+    if (key === 'r') {
+      snakeRestart();
+      return true;
+    }
+    return false;
+  }
+
+  function handleTetrisKey(key) {
+    if (key === 'arrowleft' || key === 'a') {
+      moveTetrisPiece(-1, 0);
+      return true;
+    }
+    if (key === 'arrowright' || key === 'd') {
+      moveTetrisPiece(1, 0);
+      return true;
+    }
+    if (key === 'arrowdown' || key === 's') {
+      moveTetrisPiece(0, 1);
+      state.tetris.score += 1;
+      updateTetrisHud();
+      return true;
+    }
+    if (key === 'arrowup' || key === 'x') {
+      rotateTetrisPiece(1);
+      return true;
+    }
+    if (key === 'z') {
+      rotateTetrisPiece(-1);
+      return true;
+    }
+    if (key === ' ' || key === 'spacebar') {
+      hardDropTetris();
+      return true;
+    }
+    if (key === 'p') {
+      if (state.tetris.phase === 'running') {
+        tetrisPause();
+      } else {
+        tetrisStart();
+      }
+      return true;
+    }
+    if (key === 'r') {
+      tetrisRestart();
+      return true;
+    }
+    return false;
+  }
+
+  function frame(now) {
+    const dt = now - state.lastFrame;
+    state.lastFrame = now;
+
+    if (state.snake.phase === 'running') {
+      state.snake.snakeAccumulator += dt;
+      state.snake.enemyAccumulator += dt;
+      while (state.snake.snakeAccumulator >= 120 && state.snake.phase === 'running') {
+        snakeStep();
+        state.snake.snakeAccumulator -= 120;
+      }
+      while (state.snake.enemyAccumulator >= 170 && state.snake.phase === 'running') {
+        moveSnakeEnemy();
+        state.snake.enemyAccumulator -= 170;
+      }
+      if (state.snake.phase === 'running') {
+        handleSnakeExplosion(dt);
       }
     }
 
-    if (key === 'r') {
-      restartGame();
+    tetrisStep(dt);
+    renderSnake();
+    renderTetris();
+    updateSnakeHud();
+    updateTetrisHud();
+
+    window.requestAnimationFrame(frame);
+  }
+
+  function bindGameControls() {
+    gameCards.forEach((card) => {
+      card.addEventListener('pointerdown', () => setActiveGame(card.dataset.game));
+      card.addEventListener('focusin', () => setActiveGame(card.dataset.game));
+    });
+
+    snake.start.addEventListener('click', () => {
+      setActiveGame('snake');
+      snakeStart();
+    });
+    snake.pause.addEventListener('click', () => {
+      setActiveGame('snake');
+      snakePause();
+    });
+    snake.restart.addEventListener('click', () => {
+      setActiveGame('snake');
+      snakeRestart();
+    });
+
+    tetris.start.addEventListener('click', () => {
+      setActiveGame('tetris');
+      tetrisStart();
+    });
+    tetris.pause.addEventListener('click', () => {
+      setActiveGame('tetris');
+      tetrisPause();
+    });
+    tetris.restart.addEventListener('click', () => {
+      setActiveGame('tetris');
+      tetrisRestart();
+    });
+  }
+
+  window.addEventListener('keydown', (event) => {
+    const key = event.key.toLowerCase();
+    let handled = false;
+
+    if (state.activeGame === 'snake') {
+      handled = handleSnakeKey(key);
+    } else {
+      handled = handleTetrisKey(key);
+    }
+
+    if (handled) {
+      event.preventDefault();
     }
   });
 
-  highScore = readHighScore();
-  resetRound();
-  render();
-  updateHud();
+  snake.highScore = loadSnakeHighScore();
+  resetSnake();
+  resetTetris();
+  bindGameControls();
+  setActiveGame('snake');
+  updateSnakeHud();
+  updateTetrisHud();
+  state.lastFrame = performance.now();
+  window.requestAnimationFrame(frame);
 })();

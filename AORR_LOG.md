@@ -36,3 +36,11 @@
 - 반영 문서: `AORR.md`, `MEMORY.md`
 - 다음 작업: 검증 후 재배포
 - 상태: `STEP9_COMPLETE`
+
+## Step 10 - Tetris Addition
+
+- 요청: `지렁이 게임 옆에 테트리스 게임 추가`
+- 입력 방식: `키보드 입력`
+- 반영 파일: `index.html`, `styles.css`, `script.js`
+- 확인 결과: `node --check` 통과
+- 상태: `READY_FOR_DEPLOYMENT`

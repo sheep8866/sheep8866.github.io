@@ -61,7 +61,7 @@
             </article>
             <article>
               <strong>Games</strong>
-              <span>지렁이 + 적 AI</span>
+              <span>지렁이 + 테트리스</span>
             </article>
             <article>
               <strong>Responsive</strong>
@@ -154,7 +154,12 @@
           <article class="feature-card">
             <span class="content-tag">03</span>
             <h3>Playable snake game</h3>
-            <p>키보드, WASD, 모바일 버튼으로 조작 가능한 지렁이 게임과 점수, 최고 점수, 일시정지를 넣었습니다.</p>
+            <p>키보드로 조작 가능한 지렁이 게임과 점수, 최고 점수, 일시정지를 넣었습니다.</p>
+          </article>
+          <article class="feature-card">
+            <span class="content-tag">04</span>
+            <h3>Keyboard-driven tetris</h3>
+            <p>테트리스는 화살표, Z/X, Space, P, R 키로 조작하도록 붙였습니다.</p>
           </article>
         </div>
       </section>
@@ -242,61 +247,96 @@
       <section id="games" class="section-card games-card">
         <div class="section-heading">
           <p class="section-kicker">Games</p>
-          <h2>지렁이 게임</h2>
-          <p>방향키, WASD, 모바일 버튼으로 조작할 수 있고, 적은 랜덤하게 움직이며 5초마다 폭발 후 다시 생성됩니다.</p>
+          <h2>지렁이 게임 옆에 테트리스 게임을 붙였습니다</h2>
+          <p>두 게임 모두 키보드 입력으로 조작할 수 있으며, 마지막으로 선택한 게임이 키를 받습니다.</p>
         </div>
 
-        <div class="game-panel">
-          <div class="game-hud" aria-label="게임 상태">
-            <div>
-              <span class="hud-label">상태</span>
-              <strong id="game-status">대기 중</strong>
-            </div>
-            <div>
-              <span class="hud-label">점수</span>
-              <strong id="game-score">0</strong>
-            </div>
-            <div>
-              <span class="hud-label">최고 점수</span>
-              <strong id="game-high-score">0</strong>
-            </div>
-            <div>
-              <span class="hud-label">폭발까지</span>
-              <strong id="game-countdown">05.0s</strong>
-            </div>
-          </div>
-
-          <div class="game-stage">
-            <canvas id="gameCanvas" width="640" height="400" aria-label="지렁이 게임 캔버스"></canvas>
-            <div class="game-overlay" id="game-overlay" aria-live="polite">
-              <strong>시작하려면 버튼을 누르거나 방향키를 입력하세요.</strong>
-              <span>일시정지와 재시작도 지원합니다.</span>
-            </div>
-          </div>
-
-          <div class="game-controls">
-            <div class="control-row">
-              <button class="action-button primary" type="button" data-action="start">Start</button>
-              <button class="action-button" type="button" data-action="pause">Pause</button>
-              <button class="action-button" type="button" data-action="restart">Restart</button>
+        <div class="games-grid">
+          <article class="game-card" data-game="snake" tabindex="0" aria-label="지렁이 게임">
+            <div class="section-heading compact">
+              <p class="section-kicker">Snake</p>
+              <h3>지렁이 게임</h3>
+              <p>방향키와 WASD로 움직입니다. 마지막으로 선택한 게임이 키보드 입력을 받습니다.</p>
             </div>
 
-            <div class="d-pad" aria-label="모바일 방향 버튼">
-              <span></span>
-              <button type="button" data-direction="up" aria-label="위쪽으로 이동">▲</button>
-              <span></span>
-              <button type="button" data-direction="left" aria-label="왼쪽으로 이동">◀</button>
-              <span></span>
-              <button type="button" data-direction="right" aria-label="오른쪽으로 이동">▶</button>
-              <span></span>
-              <button type="button" data-direction="down" aria-label="아래로 이동">▼</button>
-              <span></span>
+            <div class="game-hud" aria-label="지렁이 게임 상태">
+              <div>
+                <span class="hud-label">상태</span>
+                <strong id="snake-status">대기 중</strong>
+              </div>
+              <div>
+                <span class="hud-label">점수</span>
+                <strong id="snake-score">0</strong>
+              </div>
+              <div>
+                <span class="hud-label">최고 점수</span>
+                <strong id="snake-high-score">0</strong>
+              </div>
+              <div>
+                <span class="hud-label">폭발까지</span>
+                <strong id="snake-countdown">05.0s</strong>
+              </div>
             </div>
-          </div>
 
-          <p class="game-note">
-            키보드: 방향키, WASD / 모바일: 방향 버튼. 반대 방향 입력은 차단되고, 한 번에 하나의 루프만 실행됩니다.
-          </p>
+            <div class="game-stage">
+              <canvas id="snakeCanvas" width="640" height="400" aria-label="지렁이 게임 캔버스"></canvas>
+              <div class="game-overlay is-visible" id="snake-overlay" aria-live="polite">
+                <strong>지렁이 게임을 선택하면 방향키로 시작합니다.</strong>
+                <span>게임 오버, 일시정지, 재시작을 지원합니다.</span>
+              </div>
+            </div>
+
+            <div class="game-controls">
+              <div class="control-row">
+                <button class="action-button primary" type="button" data-action="snake-start">Start</button>
+                <button class="action-button" type="button" data-action="snake-pause">Pause</button>
+                <button class="action-button" type="button" data-action="snake-restart">Restart</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="game-card" data-game="tetris" tabindex="0" aria-label="테트리스 게임">
+            <div class="section-heading compact">
+              <p class="section-kicker">Tetris</p>
+              <h3>테트리스 게임</h3>
+              <p>화살표, Z/X, Space, P, R로 조작합니다. 키보드 입력으로 블록을 돌리고 떨어뜨립니다.</p>
+            </div>
+
+            <div class="game-hud" aria-label="테트리스 게임 상태">
+              <div>
+                <span class="hud-label">상태</span>
+                <strong id="tetris-status">대기 중</strong>
+              </div>
+              <div>
+                <span class="hud-label">점수</span>
+                <strong id="tetris-score">0</strong>
+              </div>
+              <div>
+                <span class="hud-label">줄</span>
+                <strong id="tetris-lines">0</strong>
+              </div>
+              <div>
+                <span class="hud-label">레벨</span>
+                <strong id="tetris-level">1</strong>
+              </div>
+            </div>
+
+            <div class="game-stage tetris-stage">
+              <canvas id="tetrisCanvas" width="320" height="640" aria-label="테트리스 게임 캔버스"></canvas>
+              <div class="game-overlay is-visible" id="tetris-overlay" aria-live="polite">
+                <strong>테트리스 게임을 선택하면 키보드로 시작합니다.</strong>
+                <span>좌우 이동, 회전, 하드 드롭, 일시정지, 재시작을 지원합니다.</span>
+              </div>
+            </div>
+
+            <div class="game-controls">
+              <div class="control-row">
+                <button class="action-button primary" type="button" data-action="tetris-start">Start</button>
+                <button class="action-button" type="button" data-action="tetris-pause">Pause</button>
+                <button class="action-button" type="button" data-action="tetris-restart">Restart</button>
+              </div>
+            </div>
+          </article>
         </div>
       </section>
     </main>
